@@ -4,11 +4,11 @@ import { demoAccountLibrary, demoSnapshot } from '../shared/demo-data';
 import { LibraryPage, Sidebar, LibraryProductCard, StoreProductCard } from './App';
 const queuedProduct = demoAccountLibrary('all', new Map()).products.find(p => p.productId === '9NPKGVXPFRSX')!;
 
-it('only the three main sidebar pages select automatically, not recents/settings/queue/account', () => {
+it('only the four main sidebar pages select automatically, not recents/settings/queue/account', () => {
   const html = renderToStaticMarkup(<Sidebar data={demoSnapshot()} page="home" go={() => {}} />);
   const auto = [...html.matchAll(/<button\b[^>]*data-gamepad-auto-select=""[^>]*>[\s\S]*?<\/button>/g)].map(match => match[0]);
-  expect(auto).toHaveLength(3);
-  for (const name of ['Home', 'My Library', 'Store']) expect(auto.some(button => button.includes(`<span>${name}</span>`))).toBe(true);
+  expect(auto).toHaveLength(4);
+  for (const name of ['Home', 'My Library', 'On this PC', 'Store']) expect(auto.some(button => button.includes(`<span>${name}</span>`))).toBe(true);
   for (const name of ['Settings', 'Most recent', 'queue-summary', 'account-summary']) expect(auto.some(button => button.includes(name))).toBe(false);
 });
 
@@ -35,7 +35,7 @@ it('only installed card selectors auto-select in the library, never Play/update/
 });
 
 it('includes explicit library header actions without automatic activation', () => {
-  const html = renderToStaticMarkup(<LibraryPage data={demoSnapshot()} toast={() => {}} />);
+  const html = renderToStaticMarkup(<LibraryPage scope="installed" data={demoSnapshot()} toast={() => {}} />);
   const header = html.match(/<header[^>]*data-gamepad-library-header[^>]*>[\s\S]*?<\/header>/)?.[0];
   expect(header).toContain('Check game updates');
   expect(header).toContain('Import game');

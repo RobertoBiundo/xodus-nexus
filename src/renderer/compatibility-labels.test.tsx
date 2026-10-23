@@ -10,10 +10,10 @@ describe('EAC presentation', () => {
     Object.assign(data.games[0], { launchSupport: 'offline-only-eac',
       launchBlockReason: 'Easy Anti-Cheat detected. Only offline play is supported.' });
     const home = renderToStaticMarkup(<HomePage data={data} go={() => {}} action={() => {}} />);
-    const library = renderToStaticMarkup(<LibraryPage data={data} selection={{ id: data.games[0].id }} toast={() => {}} />);
+    const library = renderToStaticMarkup(<LibraryPage scope="installed" data={data} selection={{ id: data.games[0].id }} toast={() => {}} />);
     for (const html of [home, library]) {
       expect(html).toContain('Gears of War: E-Day');
-      expect(html).toContain('Ready');
+      expect(html).toContain(html === home ? 'Ready' : 'Installed');
       expect(html).not.toMatch(/offline only|only offline|attestation/i);
       expect(html).not.toContain('Easy Anti-Cheat detected.');
     }

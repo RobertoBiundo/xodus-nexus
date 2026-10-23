@@ -5,7 +5,7 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
-import type { AppSnapshot, AuthStatus, DownloadTask, Game, GameLaunchOptions, GameOperation, GameUpdate, InstallRequest, Settings } from '../shared/types.js';
+import type { AppSnapshot, AuthStatus, DownloadTask, Game, GameLaunchOptions, GameOperation, GameUpdate, InstallRequest, Settings, WindowControlAction } from '../shared/types.js';
 import { downloadFailure, safeProductId } from '../shared/utils.js';
 import { downloadLimitArgs, downloadLimitKiB } from '../shared/download-bandwidth.js';
 import { DownloadBandwidthControls, isBandwidthOnlyPatch } from './download-bandwidth.js';
@@ -1188,6 +1188,10 @@ function registerDemoIpc(catalogMarket: () => string): void {
     const game = demoGames.find(game => game.id === id);
     return game?.storeId ? catalog.gameDetails(game.storeId, catalogMarket()) : undefined;
   });
+  ipcMain.handle('product-details', async (_event, productId: string) => {
+    if (typeof productId !== 'string' || !/^[A-Z0-9]{12}$/.test(productId)) throw Error('Invalid Store product ID.');
+    return catalog.gameDetails(productId, catalogMarket());
+  });
   ipcMain.handle('game-activity', () => ({ status: 'unavailable' }));
   ipcMain.handle('game-achievements', () => ({ status: 'unavailable' }));
   ipcMain.handle('launch-game', () => {});
@@ -1412,6 +1416,10 @@ function registerIpc(): void {
     if (market !== currentMarket()) throw Error('Store market changed. Try again.');
     return details;
   });
+  ipcMain.handle('product-details', async (_event, productId: string) => {
+    if (typeof productId !== 'string' || !/^[A-Z0-9]{12}$/.test(productId)) throw Error('Invalid Store product ID.');
+    return catalog.gameDetails(productId, currentMarket());
+  });
   ipcMain.handle('game-activity', async (_event, id: string, refresh = false) => {
     if (typeof id !== 'string' || typeof refresh !== 'boolean') throw Error('Invalid activity request.');
     const game = store.games.find(game => game.id === id);
@@ -1562,6 +1570,13 @@ function registerIpc(): void {
     const result = await dialog.showOpenDialog(mainWindow!, { properties: ['openDirectory', 'createDirectory'], defaultPath });
     return result.canceled ? null : result.filePaths[0];
   });
+  ipcMain.on('window-control', (event, action: WindowControlAction) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (!window) return;
+    if (action === 'minimize') window.minimize();
+    else if (action === 'toggle-maximize') window.isMaximized() ? window.unmaximize() : window.maximize();
+    else if (action === 'close') window.close();
+  });
   ipcMain.handle('choose-file', async (_event, defaultPath?: string) => {
     const result = await dialog.showOpenDialog(mainWindow!, { properties: ['openFile'], defaultPath });
     return result.canceled ? null : result.filePaths[0];
@@ -1639,6 +1654,8 @@ async function createWindow(): Promise<void> {
     title: 'Xodus Nexus',
     icon: fileURLToPath(new URL('../../assets/icon.png', import.meta.url)),
     autoHideMenuBar: true,
+    // Linux drops the system title bar; the renderer draws its own controls (WindowControls, exposed by the preload on Linux only).
+    frame: process.platform !== 'linux',
     show: !hiddenCapture,
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'index.cjs'),
@@ -1678,8 +1695,8 @@ async function createWindow(): Promise<void> {
     await mainWindow.webContents.executeJavaScript(`Promise.all(${JSON.stringify(artworkUrls)}.map(url => {
       const image = new Image(); image.src = url; return image.decode();
     }))`);
-    const pages = ['home', 'library', 'store', 'downloads', 'settings'];
-    const labels = ['Home', 'My Library', 'Store', 'Install Queue', 'Settings'];
+    const pages = ['home', 'library', 'installed', 'store', 'downloads', 'settings'];
+    const labels = ['Home', 'My Library', 'On this PC', 'Store', 'Install Queue', 'Settings'];
     for (let index = 0; index < pages.length; index++) {
       await mainWindow.webContents.executeJavaScript(`(() => {
         const button = ${JSON.stringify(pages[index])} === 'downloads' ? document.querySelector('.sidebar .queue-summary')

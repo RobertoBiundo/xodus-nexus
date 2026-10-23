@@ -37,3 +37,16 @@ export function saveLibraryFilters(filters: LibraryFilters, storage?: Preference
   }
   catch { return false; }
 }
+
+export type LibraryView = 'grid' | 'list';
+const viewKey = 'library-view';
+
+export function loadLibraryView(storage?: Preferences): LibraryView {
+  try { return (storage ?? window.localStorage).getItem(viewKey) === 'list' ? 'list' : 'grid'; }
+  catch { return 'grid'; }
+}
+
+export function saveLibraryView(view: LibraryView, storage?: Preferences): void {
+  try { (storage ?? window.localStorage).setItem(viewKey, view); }
+  catch { /* the view preference is optional */ }
+}

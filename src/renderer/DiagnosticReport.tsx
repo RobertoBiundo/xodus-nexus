@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Download, LoaderCircle } from 'lucide-react';
+import { SingleSelect } from './Dropdowns';
 import type { DiagnosticReport, Game } from '../shared/types';
 
 export function DiagnosticReportDialog({ report, close }: { report: DiagnosticReport; close: () => void }) {
@@ -36,7 +37,7 @@ export function DiagnosticReportButton({ games }: { games: Game[] }) {
   }
   return <section>
     <h3>Diagnostic report</h3><p className="fine-print">Versions, system information, backend and recent download logs. Optionally include one game’s latest logs.</p>
-    <div className="button-row"><select aria-label="Game logs for report" value={gameId} disabled={loading} onChange={event => setGameId(event.target.value)}><option value="">No game logs</option>{games.map(game => <option key={game.id} value={game.id}>{game.title}</option>)}</select><button className="secondary" disabled={loading} onClick={() => void create()}>{loading ? <LoaderCircle className="spin" /> : <Download />}Export diagnostic report</button></div>
+    <div className="button-row"><div className="diagnostic-select"><SingleSelect label="Game logs" ariaLabel="Game logs for report" value={gameId} onChange={setGameId} options={[{ value: '', label: 'No game logs' }, ...games.map(game => ({ value: game.id, label: game.title }))]} /></div><button className="secondary" disabled={loading} onClick={() => void create()}>{loading ? <LoaderCircle className="spin" /> : <Download />}Export diagnostic report</button></div>
     {error ? <p role="alert">{error}</p> : null}
     {report ? <DiagnosticReportDialog report={report} close={() => setReport(undefined)} /> : null}
   </section>;

@@ -1,0 +1,301 @@
+:root {
+  /* Frosted-glass recipe shared by the sidebar, top bar, cards, fields and menus. */
+  --glass-blur: blur(30px) saturate(1.6);
+  --glass-blur-field: blur(20px) saturate(1.6);
+  --glass-surface: rgba(30, 33, 38, .82);
+  --glass-field: rgba(24, 27, 31, .85);
+  --glass-menu: rgba(14, 16, 19, .85);
+  --glass-panel: rgba(48, 53, 60, .6);
+  --glass-chrome: rgba(8, 10, 13, .45);
+  /* Bars that content scrolls under (top bar and sticky library filters) share one tint. */
+  --glass-bar: rgba(8, 10, 13, .93);
+  --line-field: #4b515b;
+  --text-strong: #e6e9ed;
+  --text-muted: #8f98a2;
+  --text-label: #b8bec6;
+  --line-focus: #8e949b;
+}
+/* Modern library look. Selectors are prefixed with .account-games to win over the legacy rules in styles.css. */
+.account-games .library-filters {
+  position: sticky; top: -3px; z-index: 10; margin: -12px -16px 4px; padding: 17px;
+  border-radius: 12px; container-type: scroll-state;
+}
+/* The glass lives on a pseudo-element: a backdrop-filter on the bar itself would stop the dropdown menus inside it from blurring the page behind. */
+.account-games .library-filters::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  border: 1px solid rgba(255,255,255,.06);
+  background: var(--glass-bar); backdrop-filter: var(--glass-blur);
+}
+/* Square the top corners while the bar is attached to the top bar. */
+@container scroll-state(stuck: top) {
+  .account-games .library-filters::before { border-top-left-radius: 0; border-top-right-radius: 0; }
+}
+.library-view-toggle { display: inline-flex; height: 36px; padding: 3px; gap: 2px; background: #292e35; border: 1px solid var(--line-field); border-radius: 8px; }
+.library-view-toggle button { width: 30px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: #aeb5bd; cursor: pointer; }
+.library-view-toggle button:hover { color: #fff; }
+.library-view-toggle button.active { background: #3d444d; color: #fff; }
+.library-view-toggle svg { width: 16px; height: 16px; }
+
+.account-games-results .catalog-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 18px; margin-top: 14px; }
+.library-letter {
+  grid-column: 1 / -1; position: sticky; top: 91px; z-index: 5; margin: 10px 0 -4px; padding: 2px 0;
+  font-size: 13px; font-weight: 700; letter-spacing: .12em; color: #9aa4ae;
+  display: flex; align-items: center; gap: 12px;
+}
+.library-letter::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,.14), transparent); }
+
+/* Cards */
+.account-games-results .catalog-card {
+  border-radius: 12px; background: #262a30; border: 1px solid rgba(255,255,255,.06);
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  animation: library-fade-in .25s ease both;
+}
+.account-games-results .catalog-card:hover, .account-games-results .catalog-card:focus-within {
+  transform: translateY(-3px); border-color: rgba(255,255,255,.18); box-shadow: 0 12px 28px rgba(0,0,0,.45);
+}
+.account-games-results .catalog-card.selected { outline: 2px solid rgba(110,190,90,.7); outline-offset: -2px; }
+.account-games-results .catalog-card-main { position: relative; }
+.account-games-results .catalog-card-main > img, .account-games-results .catalog-cover-placeholder,
+.account-games-results .game-cover, .account-games-results .cover-placeholder {
+  aspect-ratio: 1 / 1; transition: transform .35s ease;
+}
+.account-games-results .library-card { overflow: hidden; }
+.account-games-results .catalog-card-main:hover > img, .account-games-results .library-card:hover .game-cover { transform: scale(1.04); }
+.account-games-results .catalog-card-main > :is(img, .game-cover, .cover-placeholder, .catalog-cover-placeholder) { display: block; }
+.account-games-results .catalog-card-main::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; aspect-ratio: 1 / 1; pointer-events: none;
+  background: linear-gradient(180deg, transparent 55%, rgba(18,20,23,.55)); opacity: 0; transition: opacity .2s;
+}
+.account-games-results .catalog-card-main:hover::after { opacity: 1; }
+.account-games-results .catalog-card-main > div:last-child { min-height: 64px; padding: 12px 12px 6px; gap: 3px; }
+.account-games-results .catalog-card-main strong, .account-games-results .library-card strong { font-size: 13px; font-weight: 650; letter-spacing: -.01em; }
+.account-games-results .catalog-card-main small { font-size: 11px; color: var(--text-muted); }
+.account-games-results .catalog-card-main div > span {
+  width: fit-content; margin-top: 4px; padding: 2px 8px; border-radius: 999px;
+  background: rgba(255,255,255,.07); color: #c9d0d7; font-size: 10px; font-weight: 600;
+}
+.account-games-results .catalog-support { top: 10px; left: 10px; padding: 3px 8px; border-radius: 999px; font-size: 9px; backdrop-filter: blur(6px); }
+.account-games-results .catalog-card-status {
+  margin: 0 12px; width: fit-content; height: 26px; min-height: 26px; padding: 0 10px; border-radius: 999px;
+  background: rgba(101,169,69,.16); color: #b6d5a5; font-size: 11px; font-weight: 600;
+}
+.account-games-results .catalog-card-status svg { width: 13px; height: 13px; }
+.account-games-results .catalog-card-install { margin: 0 12px; border-radius: 8px; }
+.account-games-results .library-card-menu-button { border-radius: 8px; opacity: 0; transition: opacity .15s; backdrop-filter: blur(6px); }
+.account-games-results .catalog-card:hover .library-card-menu-button, .account-games-results .catalog-card:focus-within .library-card-menu-button { opacity: 1; }
+
+/* Skeletons */
+.library-skeleton { border-radius: 12px; overflow: hidden; background: #262a30; border: 1px solid rgba(255,255,255,.05); padding-bottom: 16px; }
+.library-skeleton > div { aspect-ratio: 1 / 1; }
+.library-skeleton > span { display: block; height: 12px; margin: 14px 12px 0; border-radius: 6px; }
+.library-skeleton > span + span { width: 55%; height: 10px; margin-top: 8px; }
+.library-skeleton > *  {
+  background: linear-gradient(100deg, #2c3138 30%, #383f47 50%, #2c3138 70%); background-size: 300% 100%;
+  animation: library-shimmer 1.4s linear infinite;
+}
+
+/* List view */
+.account-games-results .catalog-grid.is-list { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.is-list .catalog-card { flex-direction: row !important; align-items: center; padding: 18px 18px 18px 14px; gap: 12px; }
+.is-list .catalog-card:hover, .is-list .catalog-card:focus-within { transform: none; }
+.is-list .catalog-card-main { display: flex !important; align-items: center; gap: 14px; flex: 1; min-width: 0; }
+.is-list .catalog-card-main::after { display: none; }
+.is-list .catalog-card-main > :is(img, .game-cover, .cover-placeholder, .catalog-cover-placeholder) { width: 56px; height: 56px; aspect-ratio: 1; flex: 0 0 56px; border-radius: 8px; }
+.is-list .catalog-card-main > div:last-child { min-height: 0; padding: 0; flex: 1; }
+.is-list .catalog-card-status, .is-list .catalog-card-install { margin: 0; flex: 0 0 auto; }
+.is-list .catalog-card-install { min-width: 120px; }
+.is-list .catalog-support { top: 6px; left: 6px; }
+/* Store cards: show the support flag on the access line (next to Owned / Game Pass) instead of over the cover. */
+.is-list .catalog-card-main:has(> .catalog-support) { display: grid !important; grid-template-columns: 56px auto minmax(0, 1fr); column-gap: 14px; row-gap: 5px; align-items: center; }
+.is-list .catalog-card-main:has(> .catalog-support) > :is(img, .catalog-cover-placeholder) { grid-column: 1; grid-row: 1 / 4; }
+.is-list .catalog-card-main:has(> .catalog-support) > div:last-child { display: contents; }
+.is-list .catalog-card-main:has(> .catalog-support) > div:last-child > :is(strong, small) { grid-column: 2 / 4; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.is-list .catalog-card-main:has(> .catalog-support) > div:last-child > strong { grid-row: 1; }
+.is-list .catalog-card-main:has(> .catalog-support) > div:last-child > small { grid-row: 2; }
+.is-list .catalog-card-main:has(> .catalog-support) > div:last-child > span { grid-column: 2; grid-row: 3; }
+.is-list .catalog-card-main:has(> .catalog-support) > .catalog-support { position: static; grid-column: 3; grid-row: 3; justify-self: start; }
+.is-list .library-card-menu-button { position: static; opacity: 1; flex: 0 0 28px; }
+.is-list .library-skeleton { display: flex; align-items: center; gap: 14px; padding: 8px; }
+.is-list .library-skeleton > div { width: 56px; aspect-ratio: 1; flex: 0 0 56px; border-radius: 8px; }
+.is-list .library-skeleton > span { margin: 0; width: 30%; }
+
+.library-empty { display: grid; justify-items: center; gap: 6px; padding: 56px 0; color: var(--text-muted); text-align: center; }
+.library-empty svg { width: 44px; height: 44px; opacity: .5; }
+
+@keyframes library-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.account-games .library-pagination { min-height: 48px; align-items: center; margin-top: 12px; }
+.library-spacer { pointer-events: none; }
+@keyframes library-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .account-games-results .catalog-card, .library-skeleton > *, .account-games-results .game-cover { animation: none; transition: none; }
+}
+
+/* Use more of ultrawide screens */
+@media (min-width: 1700px) {
+  .page.library-page, .page.home-page, .page.store-page, .page-scroll .game-details-page { max-width: min(2400px, 100%); padding-left: 56px; padding-right: 56px; }
+  .account-games-results .catalog-grid:not(.is-list) { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+}
+
+/* No card borders */
+.account-games-results .catalog-card, .account-games-results .catalog-card:hover, .account-games-results .catalog-card:focus-within,
+.library-skeleton { border-color: transparent; }
+
+/* No button borders */
+button.secondary, button.catalog-card-install { border-color: transparent; }
+
+/* Product cards are clickable like installed ones */
+.account-games-results .product-card-open { cursor: pointer; color: inherit; font: inherit; text-align: left; padding: 0; border: 0; background: transparent; display: block; width: 100%; }
+.account-games-results .product-card-open:focus-visible { outline: 2px solid #a6d68c; outline-offset: -2px; }
+
+/* Multi-select filters */
+.multi-select { position: relative; align-self: flex-end; }
+.multi-select-trigger {
+  height: 36px; display: inline-flex; align-items: center; gap: 8px; padding: 0 10px; border-radius: 8px;
+  background: #292e35; border: 1px solid var(--line-field); color: var(--text-strong); cursor: pointer; font: inherit;
+}
+.multi-select-trigger:disabled { opacity: .5; cursor: default; }
+.multi-select.has-selection .multi-select-trigger { border-color: rgba(110,190,90,.8); }
+.multi-select-trigger b { min-width: 18px; padding: 0 5px; border-radius: 9px; background: #5fae4a; color: #101310; font-size: 12px; text-align: center; }
+.multi-select-trigger svg { width: 14px; height: 14px; }
+.multi-select-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; min-width: 220px; max-width: 320px; max-height: 320px; overflow-y: auto;
+  padding: 6px; border-radius: 10px; background: #23272d; border: 1px solid var(--line-field); box-shadow: 0 16px 36px rgba(0,0,0,.5);
+}
+.multi-select-menu label { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.multi-select-menu label:hover { background: #2f353c; }
+.multi-select-menu label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.multi-select-clear { width: 100%; margin-top: 4px; padding: 6px; border: 0; border-top: 1px solid #3a4048; background: transparent; color: #aeb5bd; cursor: pointer; }
+.library-clear-filters { align-self: flex-end; height: 36px; }
+
+/* Compact checkboxes: base input rules stretch them to full width. */
+.multi-select-menu label { min-height: 32px; }
+.multi-select-menu input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none; flex: 0 0 16px; width: 16px; height: 16px; min-width: 0; padding: 0; margin: 0;
+  display: grid; place-content: center; border-radius: 4px; border: 1.5px solid #6b7480; background: transparent; cursor: pointer;
+}
+.multi-select-menu input[type="checkbox"]::after {
+  content: ''; width: 8px; height: 4px; border-left: 2px solid #101310; border-bottom: 2px solid #101310; transform: rotate(-45deg) translate(1px, -1px); opacity: 0;
+}
+.multi-select-menu input[type="checkbox"]:checked { background: #5fae4a; border-color: #5fae4a; }
+.multi-select-menu input[type="checkbox"]:checked::after { opacity: 1; }
+.multi-select-menu input[type="checkbox"]:focus-visible { outline: 2px solid #8fd37c; outline-offset: 2px; }
+.multi-select-menu label:has(input:checked) { background: rgba(95,174,74,.12); }
+
+/* Keep the checkbox and its text on one row despite the global stacked-label rule. */
+:is(.library-filters, .diagnostic-select) .multi-select-menu label {
+  display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px; width: auto; margin: 0; color: var(--text-strong);
+}
+:is(.library-filters, .diagnostic-select) .multi-select-menu label > span { flex: 1 1 auto; min-width: 0; }
+
+/* Identical checkbox size regardless of label length or global input rules. */
+:is(.library-filters, .diagnostic-select) .multi-select-menu label > input[type="checkbox"] {
+  box-sizing: border-box; flex: 0 0 16px !important; width: 16px !important; height: 16px !important;
+  min-width: 16px !important; max-width: 16px !important; min-height: 16px !important; padding: 0 !important; margin: 0 !important;
+}
+
+/* Uniform dropdown width */
+:is(.library-filters, .diagnostic-select) .multi-select, :is(.library-filters, .diagnostic-select) .multi-select-trigger { width: 150px; }
+:is(.library-filters, .diagnostic-select) .multi-select-trigger { justify-content: flex-start; }
+:is(.library-filters, .diagnostic-select) .multi-select-trigger > span { flex: 1 1 auto; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:is(.library-filters, .diagnostic-select) .multi-select-menu { width: 240px; max-width: none; }
+
+/* Cards and list rows use the same glass as the Downloads items. */
+.app-shell.has-backdrop .account-games-results .catalog-card {
+  background: var(--glass-surface); backdrop-filter: var(--glass-blur); border-color: rgba(255,255,255,.06);
+}
+
+/* The base rule pins buttons to the top; centre them against the row in list view. */
+.account-games-results .catalog-grid.is-list .catalog-card :is(.catalog-card-install, .catalog-card-status) { align-self: center; }
+
+/* One font for every filter dropdown (native selects otherwise fall back to the browser default). */
+:is(.library-filters, .diagnostic-select) :is(.multi-select-trigger, .multi-select-menu) { font-family: inherit; font-size: 13px; font-weight: 400; letter-spacing: normal; }
+
+/* Single-select dropdowns (Filters, Play state) share the multi-select look. */
+.single-select-field { display: grid; gap: 5px; color: var(--text-label); font-size: 11px; }
+.single-select-caption { line-height: 1.2; }
+.single-select-field .multi-select { align-self: auto; }
+:is(.library-filters, .diagnostic-select) .single-select-option {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 32px; padding: 6px 8px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--text-strong); font: inherit; font-size: 13px; text-align: left; cursor: pointer;
+}
+:is(.library-filters, .diagnostic-select) .single-select-option:hover { background: #2f353c; }
+:is(.library-filters, .diagnostic-select) .single-select-option.selected { background: rgba(95,174,74,.12); }
+.single-select-option svg { width: 14px; height: 14px; color: #8fd37c; }
+.single-select .multi-select-trigger svg:last-child { margin-left: auto; }
+
+/* Translucent glass dropdowns (triggers and open menus). */
+:is(.library-filters, .diagnostic-select) .multi-select-trigger { background: var(--glass-field); backdrop-filter: var(--glass-blur-field); }
+:is(.library-filters, .diagnostic-select) .multi-select-menu { background: var(--glass-menu); backdrop-filter: var(--glass-blur); border-color: rgba(255,255,255,.1); }
+
+/* Search inputs share the dropdown glass; the library one is shaped like the top bar search. */
+.library-search-field {
+  height: 37px; display: grid; grid-template-columns: 24px 1fr 28px; align-items: center; padding: 0 10px; border-radius: 19px;
+  background: var(--glass-field); backdrop-filter: var(--glass-blur-field); border: 1px solid var(--line-field);
+}
+.library-search-field:focus-within { border-color: var(--line-focus); }
+.library-search-field > svg { width: 18px; color: #c7c9cc; }
+.account-games .library-filters .library-search-field input {
+  height: auto; padding: 0; border: 0; outline: 0; background: transparent; backdrop-filter: none; border-radius: 0;
+  font-family: inherit; font-size: 13px; font-weight: 400; color: var(--text-strong);
+}
+.library-search-field > button { border: 0; background: none; color: #a8acb1; padding: 3px; cursor: pointer; display: grid; place-items: center; }
+.library-search-field > button svg { width: 15px; }
+.topbar .search-box, .topbar .search-box:focus-within { background: var(--glass-field); backdrop-filter: var(--glass-blur-field); border-color: var(--line-field); }
+.topbar .search-box:focus-within { border-color: var(--line-focus); }
+.topbar .search-box input { font-family: inherit; }
+
+/* Custom window frame (Linux): the top bar drags the window and hosts the window buttons. */
+.topbar:has(.window-controls) { -webkit-app-region: drag; }
+.topbar:has(.window-controls) :is(.search-box, .top-status, .window-controls, .search-results) { -webkit-app-region: no-drag; }
+.topbar:has(.window-controls) .top-status { right: 156px; }
+.window-controls { position: absolute; top: 0; right: 0; height: 100%; display: flex; }
+.window-controls button { width: 48px; height: 100%; display: grid; place-items: center; border: 0; background: transparent; color: #c0c3c7; cursor: pointer; }
+.window-controls button:hover { background: rgba(255,255,255,.1); color: #fff; }
+.window-controls button.close:hover { background: #c42b1c; }
+.window-controls svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1; stroke-linecap: butt; }
+
+/* Home "Recently installed": the library grid card without the status footer; sizes mirror .catalog-card. */
+.poster-row.recent-row { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 18px; }
+.poster-card.recent-card {
+  position: relative; overflow: hidden; padding: 0; border: 1px solid rgba(255,255,255,.06); border-radius: 12px;
+  background: var(--glass-surface); backdrop-filter: var(--glass-blur); transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.poster-card.recent-card:hover, .poster-card.recent-card:focus-visible { transform: translateY(-3px); border-color: rgba(255,255,255,.18); box-shadow: 0 12px 28px rgba(0,0,0,.45); }
+.poster-card.recent-card .game-cover, .poster-card.recent-card .cover-placeholder { display: block; width: 100%; aspect-ratio: 1 / 1; border-radius: 0; transition: transform .35s ease; }
+.poster-card.recent-card:hover .game-cover, .poster-card.recent-card:hover .cover-placeholder { transform: scale(1.04); outline: 0; }
+.poster-card.recent-card > div { min-width: 0; padding: 12px; display: grid; gap: 3px; align-content: start; }
+.poster-card.recent-card strong { margin: 0; font-size: 13px; font-weight: 650; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.poster-card.recent-card small { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Install by Product ID: same glass, type sizes, inputs and buttons as the library filter bar. */
+.store-page .manual-install { position: relative; isolation: isolate; background: transparent; border: 1px solid rgba(255,255,255,.06); border-radius: 12px; padding: 24px 20px; gap: 14px; }
+.store-page .manual-install::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  background: var(--glass-surface); backdrop-filter: var(--glass-blur);
+}
+.store-page .manual-install label { gap: 5px; color: var(--text-label); font-size: 11px; }
+.store-page .manual-install label em { margin-left: 4px; color: #7f8791; }
+.store-page .manual-install input {
+  height: 36px; padding: 7px 10px; border: 1px solid var(--line-field); border-radius: 8px; color: var(--text-strong);
+  background: var(--glass-field); backdrop-filter: var(--glass-blur-field); font-family: inherit; font-size: 13px; font-weight: 400;
+}
+.store-page .manual-install input:focus { border-color: var(--line-focus); }
+.store-page .manual-install .input-action button {
+  height: 36px; min-height: 36px; border: 1px solid var(--line-field); border-radius: 8px; color: var(--text-strong); cursor: pointer;
+  background: var(--glass-field); backdrop-filter: var(--glass-blur-field);
+}
+.store-page .manual-install .input-action button:hover { border-color: var(--line-focus); }
+.store-page .manual-install button.secondary { height: 36px; min-height: 36px; border-radius: 8px; font-size: 13px; }
+.store-page .manual-install .input-action input { border-radius: 8px 0 0 8px; }
+.store-page .manual-install .input-action button { border-left: 0; border-radius: 0 8px 8px 0; }
+
+/* Featured tiles on the Store carry no border. */
+.store-page .featured-tile, .store-page .featured-tile:hover { border: 0; }
+
+/* Home "Continue playing" banner carries no border. */
+.home-page .spotlight { border: 0; }
+
+/* Diagnostics: align the labelled dropdown with the button beside it. */
+.diagnostics-content .button-row:has(.diagnostic-select) { align-items: flex-end; }
+.diagnostic-select .multi-select-trigger { height: 40px; }

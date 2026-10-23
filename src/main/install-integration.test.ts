@@ -30,7 +30,7 @@ vi.mock('electron', () => ({
   app: { requestSingleInstanceLock: () => true, getPath: (name: string) => path.join(h.root, name),
     setPath: vi.fn(), on: (name: string, callback: (...args: any[]) => any) => h.events.set(name, callback), once: vi.fn(),
     whenReady: () => Promise.resolve(), getVersion: () => '0.0.0', isPackaged: false, quit: h.quit },
-  ipcMain: { handle: (name: string, callback: (...args: any[]) => any) => h.handlers.set(name, callback) },
+  ipcMain: { on: () => undefined, handle: (name: string, callback: (...args: any[]) => any) => h.handlers.set(name, callback) },
   BrowserWindow: class { webContents = { on: vi.fn(), send: vi.fn(), setWindowOpenHandler: vi.fn() };
     on() {} once() {} show() {} focus() {} isDestroyed() { return false; } async loadFile() {} },
   screen: { getPrimaryDisplay: () => ({ workArea: { x: 0, y: 0, width: 1440, height: 900 } }) },

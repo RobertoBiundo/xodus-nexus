@@ -72,8 +72,17 @@ html:not([data-gamepad-navigation]) [data-gamepad-card]:has(> :is(.library-card,
 
 .recents { margin-top: 19px; display: grid; gap: 4px; min-height: 0; overflow: hidden; }
 .recents > span { padding: 0 8px 7px; color: #b0b4ba; font-size: 11px; font-weight: 600; }
-.recents button { height: 48px; padding: 5px 8px; border: 0; border-radius: 4px; background: transparent; display: grid; grid-template-columns: 38px minmax(0,1fr); align-items: center; gap: 9px; text-align: left; cursor: pointer; }
-.recents button:hover { background: #30343a; }
+.recent-item { height: 48px; padding: 5px 8px; border-radius: 4px; display: grid; grid-template-columns: 38px minmax(0,1fr); align-items: center; gap: 9px; }
+.recent-item:hover { background: #30343a; }
+.recent-item.active { background: #3a3e44; box-shadow: inset 3px 0 0 #8e969e; }
+.recents button { border: 0; background: transparent; padding: 0; text-align: left; cursor: pointer; }
+.recent-open { height: 38px; min-width: 0; }
+.recent-play { position: relative; width: 38px; height: 38px; border-radius: 3px; overflow: hidden; }
+.recent-play:disabled { cursor: default; }
+.recent-play-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(10,12,14,.55); color: #fff; opacity: 0; transition: opacity .15s ease; }
+.recent-play-overlay svg { width: 18px; height: 18px; fill: currentColor; }
+.recent-play:not(:disabled):hover .recent-play-overlay, .recent-play:not(:disabled):focus-visible .recent-play-overlay { opacity: 1; }
+.recent-play:focus-visible { outline: 2px solid #a6d68c; outline-offset: 1px; }
 .recents .game-cover, .recents .cover-placeholder { width: 38px; height: 38px; border-radius: 3px; }
 .recents strong { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sidebar-bottom { margin-top: auto; border-top: 1px solid var(--line); padding-top: 8px; display: grid; gap: 4px; }
@@ -142,7 +151,7 @@ html:not([data-gamepad-navigation]) [data-gamepad-card]:has(> :is(.library-card,
 .status-dot.amber { background: #e5b84e; box-shadow: 0 0 7px rgba(229,184,78,.4); }
 .status-dot.red { background: #e56868; box-shadow: none; }
 
-.page-scroll { min-height: 0; overflow: auto; scrollbar-color: #555a60 transparent; }
+.page-scroll { min-height: 0; overflow: auto; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: #555a60 transparent; }
 .page { max-width: 1460px; margin: 0 auto; padding: 30px 44px 70px; }
 .page-header { min-height: 64px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .page-header h1 { margin: 0 0 5px; font-size: 30px; font-weight: 650; letter-spacing: -.035em; }

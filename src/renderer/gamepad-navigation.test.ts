@@ -21,7 +21,7 @@ describe('gamepad input isolation and edge detection', () => {
     expect(input.poll(pad([0]), 2200).action).toBe('accept');
     expect(input.poll(pad([0]), 5000).action).toBeUndefined();
   });
-  it.each([[0, 'accept'], [1, 'back'], [2, 'options'], [4, 'previous-page'], [5, 'next-page']] as const)('button %s fires %s once until release', (button, action) => {
+  it.each([[0, 'accept'], [1, 'back'], [2, 'options'], [4, 'focus-menu'], [5, 'focus-content']] as const)('button %s fires %s once until release', (button, action) => {
     const input = new PadInput(); input.poll(pad(), 0);
     expect(input.poll(pad([button]), 10).action).toBe(action);
     expect(input.poll(pad([button]), 5000).action).toBeUndefined();
@@ -64,6 +64,11 @@ describe('gamepad input isolation and edge detection', () => {
     expect(input.poll(pad([0, 1]), 1).action).toBe('back');
     expect(input.poll(pad([0]), 2).action).toBeUndefined();
   });
+  it('the left stick scrolls too', () => {
+    const input = new PadInput();
+    input.poll(pad(), 0);
+    expect(input.poll(pad([], [0, -0.8]), 1)).toEqual({ scroll: -0.8, action: undefined });
+  });
   it('right stick scroll has a deadzone and also requires a neutral connection', () => {
     const input = new PadInput();
     expect(input.poll(pad([], [0, 0, 0, 1]), 0).scroll).toBe(0);
@@ -92,8 +97,9 @@ describe('direction and geometry', () => {
   it('keeps the same column with a tiny refresh control beside larger buttons', () => {
     expect(navigationTarget(rect(300,500), [{value:'small-diagonal',rect:rect(390,450,20,20)},{value:'above',rect:rect(300,200,100,40)}], 'up')).toBe('above');
   });
-  it.each([[0.8, 0, 'right'], [-0.8, 0, 'left'], [0, 0.8, 'down'], [0, -0.8, 'up'], [0.6, 0.9, 'down']] as const)('stick %s/%s selects %s', (x, y, direction) => {
-    expect(padDirection(pad([], [x, y]))).toBe(direction);
+  it('sticks never move focus; only the D-pad does', () => {
+    expect(padDirection(pad([], [0.9, 0]))).toBeUndefined();
+    expect(padDirection(pad([13]))).toBe('down');
   });
   it('ignores jitter, missing and non-finite axes', () => {
     for (const axes of [[], [0.54, -0.54], [NaN, Infinity]]) expect(padDirection(pad([], axes))).toBeUndefined();

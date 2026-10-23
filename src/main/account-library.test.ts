@@ -150,7 +150,7 @@ it('loads all/owned/Game Pass using one account read and caches only bound pages
   expect((await library.get('owned')).products.map(p=>p.productId)).toEqual([A]);
   expect((await library.get('gamepass')).products.map(p=>p.productId)).toEqual([B]);
   expect(reader).toHaveBeenCalledTimes(1);
-  await library.get('all'); expect(catalog).toHaveBeenCalledTimes(3);
+  await library.get("all"); expect(catalog).toHaveBeenCalledTimes(1);
   library.select(undefined,'/backend','US'); await expect(library.get('all')).rejects.toThrow('Sign in');
 });
 
@@ -163,11 +163,21 @@ it('does not publish a late response after an account switch',async()=>{
 });
 
 it('binds pagination to snapshot and filter, rather than accepting arbitrary product IDs',async()=>{
-  const entries=Array.from({length:61},(_,i)=>row(String(i).padStart(12,'0')));
+  const entries=Array.from({length:121},(_,i)=>row(String(i).padStart(12,'0')));
   const library=new AccountLibrary(async ids=>ids.map(product),async()=>output(entries));
   library.select('one@example.test','/backend','US');
-  const first=await library.get('all'); expect(first.products).toHaveLength(60); expect(first.cursor).toBeTruthy();
+  const first=await library.get('all'); expect(first.products).toHaveLength(120); expect(first.cursor).toBeTruthy();
   const last=await library.get('all',first.cursor); expect(last.products).toHaveLength(1); expect(last.cursor).toBeUndefined();
   await expect(library.get('owned',first.cursor)).rejects.toThrow('Invalid');
   await library.get('all',undefined,true); await expect(library.get('all',first.cursor)).rejects.toThrow('expired');
+});
+
+it('pages through the whole library sorted by title, not by product id',async()=>{
+  const ids=Array.from({length:130},(_,i)=>String(i).padStart(12,'0'));
+  const title=(id:string)=>`Game ${String(129-Number(id)).padStart(3,'0')}`;
+  const library=new AccountLibrary(async batch=>batch.map(id=>({...product(id),title:title(id)})),async()=>output(ids.map(id=>row(id))));
+  library.select('one@example.test','/backend','US');
+  const titles:string[]=[]; let cursor:string|undefined;
+  do { const page=await library.get('all',cursor); titles.push(...page.products.map(p=>p.title)); cursor=page.cursor; } while(cursor);
+  expect(titles).toHaveLength(130); expect(titles).toEqual([...titles].sort());
 });

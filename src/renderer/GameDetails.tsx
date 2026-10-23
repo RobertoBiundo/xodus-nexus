@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Clock3, Gamepad2, Images, LoaderCircle, MoreHorizontal, RefreshCw, X } from 'lucide-react';
-import type { AppSnapshot, Game, GameActivity, GameStoreDetails } from '../shared/types';
+import { ArrowLeft, Check, Download, ChevronLeft, ChevronRight, Clock3, Gamepad2, Images, LoaderCircle, MoreHorizontal, RefreshCw, X } from 'lucide-react';
+import type { AccountLibraryPage, AppSnapshot, Game, GameActivity, GameStoreDetails } from '../shared/types';
 import './game-details.css';
 import { Achievements } from './Achievements';
+import { usePackageInstall } from './PackageInstall';
+import { backdropStore } from './backdrop-store';
+import { BACKDROP_FADE_MS } from './constants';
+import { installDestination } from './library-utils';
 
 export function formatMinutes(minutes?: number): string {
   if (minutes === undefined || !Number.isFinite(minutes) || minutes < 0) return 'Unavailable';
@@ -22,7 +26,60 @@ function activityNote(activity?: GameActivity): string {
   }
 }
 
-function Artwork({ src, alt, ...props }: { src?: string; alt: string; className?: string; loading?: 'lazy' }) {
+/** Declares a details page's artwork as the backdrop and makes it the shared one for the browsing pages. */
+export function Backdrop({ src }: { src?: string }) {
+  useEffect(() => {
+    backdropStore.setOverride(src);
+    if (src) backdropStore.set(src);
+    return () => backdropStore.setOverride(undefined);
+  }, [src]);
+  return null;
+}
+
+type BackdropLayer = { id: number; src: string; shown: boolean };
+
+/** Single, always-mounted blurred background that cross-fades whenever the requested artwork changes. */
+export function BackdropHost() {
+  const [desired, setDesired] = useState(backdropStore.display());
+  const [layers, setLayers] = useState<BackdropLayer[]>([]);
+  const latest = useRef(0), counter = useRef(0), cleanup = useRef<number>(), frame = useRef<number>();
+  useEffect(() => backdropStore.subscribe(() => setDesired(backdropStore.display())), []);
+  const scheduleCleanup = () => {
+    window.clearTimeout(cleanup.current);
+    // Older layers stay opaque under the incoming one and are removed once it has fully faded in.
+    cleanup.current = window.setTimeout(() => setLayers(old => {
+      if (!latest.current) return [];
+      return old.some(layer => layer.id === latest.current && layer.shown) ? old.filter(layer => layer.id === latest.current) : old;
+    }), BACKDROP_FADE_MS + 200);
+  };
+  useEffect(() => {
+    setLayers(old => {
+      if (!desired) { latest.current = 0; return old.map(layer => ({ ...layer, shown: false })); }
+      const current = old.find(layer => layer.id === latest.current);
+      if (current?.src === desired) return old;
+      latest.current = ++counter.current;
+      return [...old, { id: latest.current, src: desired, shown: false }];
+    });
+    scheduleCleanup();
+  }, [desired]);
+  useEffect(() => () => { window.clearTimeout(cleanup.current); cancelAnimationFrame(frame.current!); }, []);
+  // A layer only starts fading in once its image has loaded; the extra frames let the browser paint opacity 0 first so the transition runs.
+  const reveal = (id: number) => {
+    if (id !== latest.current) return;
+    cancelAnimationFrame(frame.current!);
+    frame.current = requestAnimationFrame(() => { frame.current = requestAnimationFrame(() => {
+      if (id !== latest.current) return;
+      setLayers(old => old.map(layer => layer.id === id ? { ...layer, shown: true } : layer));
+      scheduleCleanup();
+    }); });
+  };
+  const drop = (id: number) => setLayers(old => old.filter(layer => layer.id !== id));
+  return <>{layers.map(layer => <div key={layer.id} className={`gd-backdrop${layer.shown ? ' shown' : ''}`} aria-hidden="true">
+    <img ref={image => { if (image?.complete && image.naturalWidth && !layer.shown) reveal(layer.id); }} src={layer.src} alt="" referrerPolicy="no-referrer" onLoad={() => reveal(layer.id)} onError={() => drop(layer.id)} />
+  </div>)}</>;
+}
+
+export function Artwork({ src, alt, ...props }: { src?: string; alt: string; className?: string; loading?: 'lazy' }) {
   const [failed, setFailed] = useState(false);
   useEffect(() => setFailed(false), [src]);
   return src && !failed ? <img src={src} alt={alt} {...props} referrerPolicy="no-referrer" onError={() => setFailed(true)} /> : <span className="gd-artwork-unavailable"><Gamepad2 /><span>{alt || 'Artwork unavailable'}</span></span>;
@@ -58,6 +115,7 @@ export function Gallery({ title, images, initial, close }: { title: string; imag
 interface PageProps {
   game: Game;
   back: () => void;
+  backLabel?: string;
   play: ReactNode;
   manage: ReactNode;
   notices?: ReactNode;
@@ -74,7 +132,7 @@ interface ContentProps extends PageProps {
 }
 
 /** Descriptive data never gates Play or changes package/licensing decisions. */
-export function GameDetailsContent({ game, back, play, manage, notices, technical, achievements, details, activity, metadataLoading, activityLoading, metadataError, refresh }: ContentProps) {
+export function GameDetailsContent({ game, back, backLabel = 'library', play, manage, notices, technical, achievements, details, activity, metadataLoading, activityLoading, metadataError, refresh }: ContentProps) {
   const [gallery, setGallery] = useState<number>();
   const [expanded, setExpanded] = useState(false);
   const manageRef = useRef<HTMLDetailsElement>(null);
@@ -119,7 +177,8 @@ export function GameDetailsContent({ game, back, play, manage, notices, technica
     return () => { window.removeEventListener('keydown', escape); document.removeEventListener('pointerdown', outside); };
   }, [back]);
   return <section className="game-details-page" data-gamepad-detail={game.id}>
-    <div className="gd-back-row"><button className="gd-back" data-gamepad-detail-back onClick={back}><ArrowLeft />Back to library<span className="gd-back-hint" aria-hidden="true">B</span></button></div>
+    <Backdrop src={details?.heroUrl ?? game.heroUrl ?? game.coverUrl} />
+    <div className="gd-back-row"><button className="gd-back" data-gamepad-detail-back onClick={back}><ArrowLeft />Back to {backLabel}<span className="gd-back-hint" aria-hidden="true">B</span></button></div>
     <section className="gd-hero">
       <Artwork className="gd-hero-art" src={details?.heroUrl ?? game.heroUrl ?? game.coverUrl} alt="" />
       <div className="gd-hero-shade" />
@@ -166,4 +225,75 @@ export function GameDetails(props: PageProps & { data: AppSnapshot }) {
   }, [game.id, data.auth.username, data.auth.stored, data.auth.running, data.backend.binaryPath]);
   useEffect(() => { setActivity(undefined); loadActivity(); return () => { request.current++; }; }, [loadActivity]);
   return <GameDetailsContent {...props} details={details} activity={activity} metadataLoading={metadataLoading} metadataError={metadataError} activityLoading={activityLoading} refresh={() => loadActivity(true)} achievements={<Achievements gameId={game.id} title={game.title} data={data} />} />;
+}
+
+type LibraryProduct = AccountLibraryPage['products'][number];
+
+/** Store details for a licensed game that is not installed yet. */
+export function ProductDetails({ product, data, back, toast }: { product: LibraryProduct; data: AppSnapshot; back: () => void; toast: (value: { kind: 'success' | 'error'; message: string }) => void }) {
+  const startPackageInstall = usePackageInstall();
+  const [details, setDetails] = useState<GameStoreDetails>();
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [gallery, setGallery] = useState<number>();
+  const [expanded, setExpanded] = useState(false);
+  const [installing, setInstalling] = useState(false);
+  useEffect(() => {
+    let live = true; setDetails(undefined); setLoading(true); setFailed(false);
+    window.launcher.getProductDetails(product.productId).then(value => { if (live) setDetails(value); }).catch(() => { if (live) setFailed(true); }).finally(() => { if (live) setLoading(false); });
+    return () => { live = false; };
+  }, [product.productId, data.settings.market]);
+  useEffect(() => {
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !document.querySelector('[role="dialog"][aria-modal="true"]')) { event.preventDefault(); back(); }
+    };
+    window.addEventListener('keydown', escape);
+    return () => window.removeEventListener('keydown', escape);
+  }, [back]);
+  const ids = [product.productId, product.installProductId ?? ''].map(id => id.toUpperCase());
+  const present = data.games.some(game => ids.includes(game.storeId?.toUpperCase() ?? ''));
+  const queued = data.downloads.some(task => ['running', 'queued', 'paused'].includes(task.status) && ids.includes(task.productId.toUpperCase()));
+  const canInstall = data.backend.capabilities.streaming;
+  const supported = product.installability === 'supported';
+  const disabled = present || queued || installing || !canInstall || !supported;
+  const label = present ? 'Installed' : queued ? 'In Install Queue' : installing ? 'Preparing…' : 'Install';
+  const description = details?.description || product.description || '';
+  const shortDescription = description.split(/\r?\n\s*\r?\n/)[0];
+  const images = details?.screenshots ?? [];
+  const release = details?.releaseDate && Number.isFinite(Date.parse(details.releaseDate)) ? new Date(details.releaseDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : undefined;
+  const categories = details?.categories ?? product.categories;
+  async function install() {
+    if (!supported) { toast({ kind: 'error', message: product.supportNote }); return; }
+    setInstalling(true);
+    try {
+      if (!await startPackageInstall({ productId: product.installProductId ?? product.productId, title: product.title,
+        destination: installDestination(data.settings.installRoot, product.title, product.productId) })) return;
+      toast({ kind: 'success', message: `${product.title} added to Install Queue.` });
+    } catch (error) { toast({ kind: 'error', message: error instanceof Error ? error.message : String(error) }); }
+    finally { setInstalling(false); }
+  }
+  return <section className="game-details-page" data-gamepad-detail={product.productId}>
+    <Backdrop src={details?.heroUrl ?? product.heroUrl ?? product.posterUrl} />
+    <div className="gd-back-row"><button className="gd-back" data-gamepad-detail-back onClick={back}><ArrowLeft />Back to library<span className="gd-back-hint" aria-hidden="true">B</span></button></div>
+    <section className="gd-hero">
+      <Artwork className="gd-hero-art" src={details?.heroUrl ?? product.heroUrl ?? product.posterUrl} alt="" />
+      <div className="gd-hero-shade" />
+      <div className="gd-hero-copy"><span className={`gd-ready ${present ? 'ready' : 'imported'}`}>{present ? <Check /> : <Download />}{present ? 'Installed' : product.access === 'owned' ? 'Owned · Not installed' : 'Game Pass · Not installed'}</span><h1>{details?.title ?? product.title}</h1><p>{details?.publisher ?? product.publisher ?? 'Publisher not provided'}</p><div className="gd-tags">{categories.map(category => <span key={category}>{category}</span>)}</div></div>
+    </section>
+    <div className="gd-page-content">
+      <section className="gd-play-row" data-gamepad-action-row aria-label="Game actions">
+        <div className="button-row gd-play-controls"><button className="primary" data-gamepad-play disabled={disabled} title={supported ? undefined : product.supportNote} onClick={() => { void install(); }}>{present ? <Check /> : <Download />}{label}</button></div>
+        {supported || present ? null : <p className="gd-support-note" role="note">Unsupported</p>}
+      </section>
+      <div className="gd-detail-columns">
+        <div className="gd-description-column">
+          <section className="gd-about"><h2>About the game</h2><p>{loading && !description ? 'Loading game information…' : description ? expanded ? description : shortDescription : failed ? 'Game information could not be loaded.' : 'Microsoft Store did not provide a description for this game.'}</p>{description !== shortDescription ? <button className="gd-text-button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? 'Show less' : 'Read more'}<ChevronRight /></button> : null}</section>
+          <section className="gd-gallery"><header><h2>Screenshots</h2>{images.length ? <button className="gd-text-button" onClick={() => setGallery(0)}><Images />View all {images.length}</button> : null}</header><div>{images.slice(0, 4).map((url, index) => <button key={url} aria-label={`Open screenshot ${index + 1}`} onClick={() => setGallery(index)}><Artwork loading="lazy" src={url} alt={`${product.title} screenshot ${index + 1}`} /></button>)}</div>{!images.length ? <p className="gd-empty">{loading ? 'Loading screenshots…' : 'No screenshots available.'}</p> : null}</section>
+        </div>
+        <aside className="gd-facts"><h2>Game information</h2><dl><div><dt>Publisher</dt><dd>{details?.publisher ?? product.publisher ?? 'Unavailable'}</dd></div><div><dt>Release date</dt><dd>{release ?? 'Unavailable'}</dd></div><div><dt>Categories</dt><dd>{categories.length ? categories.join(' · ') : 'Unavailable'}</dd></div><div><dt>Access</dt><dd>{product.access === 'owned' ? 'Owned' : 'Game Pass'}</dd></div>{details ? <div><dt>Metadata source</dt><dd>Microsoft Store</dd></div> : null}</dl></aside>
+      </div>
+      <p className="gd-disclaimer">Installation checks your license again.</p>
+    </div>
+    {gallery !== undefined && images.length ? <Gallery title={product.title} images={images} initial={gallery} close={() => setGallery(undefined)} /> : null}
+  </section>;
 }

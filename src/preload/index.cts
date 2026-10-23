@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { Game, InstallRequest, LauncherApi, Settings } from '../shared/types.js';
+import type { Game, InstallRequest, LauncherApi, Settings, WindowControlAction } from '../shared/types.js';
 
 // Demo fixtures live in the main process (src/shared/demo-data.ts) and are
 // served over these same IPC channels when XODUS_DEMO=1, so the sandboxed
@@ -59,6 +59,7 @@ const api: LauncherApi = {
   removeGame: (id: string, mode: 'library' | 'delete-files') => ipcRenderer.invoke('remove-game', id, mode),
   getGameLaunchOptions: (id: string) => ipcRenderer.invoke('game-launch-options', id),
   getGameDetails: (id: string) => ipcRenderer.invoke('game-details', id),
+  getProductDetails: (productId: string) => ipcRenderer.invoke('product-details', productId),
   getGameActivity: (id: string, refresh?: boolean) => ipcRenderer.invoke('game-activity', id, refresh),
   getGameAchievements: (id: string, refresh?: boolean) => ipcRenderer.invoke('game-achievements', id, refresh),
   launchGame: (id: string) => ipcRenderer.invoke('launch-game', id),
@@ -80,6 +81,11 @@ const api: LauncherApi = {
     ipcRenderer.on('operation-log', listener);
     return () => ipcRenderer.removeListener('operation-log', listener);
   },
+  windowControls: typeof process !== 'undefined' && process.platform === 'linux' ? {
+    minimize: () => ipcRenderer.send('window-control', 'minimize' satisfies WindowControlAction),
+    toggleMaximize: () => ipcRenderer.send('window-control', 'toggle-maximize' satisfies WindowControlAction),
+    close: () => ipcRenderer.send('window-control', 'close' satisfies WindowControlAction),
+  } : undefined,
   isDemoTour: () => process.env.XODUS_DEMO_TOUR === '1' && !process.env.XODUS_DEMO_CAPTURE_DIR,
 };
 

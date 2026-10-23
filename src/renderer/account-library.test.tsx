@@ -37,17 +37,17 @@ it('restores the parent-owned filters after the library is recreated',()=>{
   const data=demoSnapshot(); data.auth={running:false,stored:false,note:''};
   const library=()=>renderToStaticMarkup(<AccountGames data={data} toast={()=>{}} filters={filters} onFiltersChange={()=>{}} />);
   for(const html of [library(),library()]) {
-    expect(html).toContain('<option value="owned" selected="">');
-    expect(html).toContain('<option value="installed" selected="">');
+    expect(html).toMatch(/aria-label="Access"[^>]*><span>Owned<\/span>/);
+    expect(html).toMatch(/aria-label="Play state"[^>]*><span>Installed<\/span>/);
     expect(html).toContain('value="Edition"');
-    expect(html).not.toContain('<option value="all" selected="">');
+    expect(html).not.toContain('<span>All games</span>');
   }
 });
 it('offers Access and Play state filters without cloud streaming, preserving installed games offline',()=>{
   const data=demoSnapshot(); data.auth={running:false,stored:false,note:''};
   const html=renderToStaticMarkup(<AccountGames data={data} toast={()=>{}} />);
-  expect(html).toContain('aria-label="Access"'); expect(html).toContain('In Game Pass'); expect(html).toContain('Owned');
-  expect(html).toContain('aria-label="Play state"'); expect(html).toContain('Ready to install');
+  expect(html).toContain('aria-label="Access"'); expect(html).toContain('All games');
+  expect(html).toContain('aria-label="Play state"'); expect(html).toContain('All states');
   expect(html).not.toContain('Cloud playable'); expect(html).toContain('Installed games remain available');
   expect(html).toContain(data.games[0].title);
   expect(html).not.toContain('Owned · Installed');
@@ -88,8 +88,8 @@ it('gives installed cards a separate status footer and an accessible compact ref
 
 it('keeps pagination loading inside the button, without the oversized Store loading panel',()=>{
   const more=renderToStaticMarkup(<LibraryPagination loading={true} hasMore={true} load={()=>{}} />);
-  expect(more).toContain('disabled'); expect(more).toContain('Loading games');
-  expect(more).not.toContain('catalog-loading'); expect(more).not.toContain('library-loading');
+  expect(more).not.toContain('<button'); expect(more).toContain('Loading games');
+  expect(more).not.toContain('catalog-loading');
   const initial=renderToStaticMarkup(<LibraryPagination loading={true} hasMore={false} load={()=>{}} />);
   expect(initial).toContain('role="status"'); expect(initial).not.toContain('catalog-loading');
   expect(renderToStaticMarkup(<LibraryPagination loading={false} hasMore={false} load={()=>{}} />)).toBe('');

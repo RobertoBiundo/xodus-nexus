@@ -14,6 +14,8 @@ type Catalog = (ids: string[], market: string) => Promise<CatalogProduct[]>;
 const id = (value: unknown): value is string => typeof value === 'string' && /^[A-Z0-9]{12}$/.test(value);
 const plans = new Set(['CFQ7TTC0KGQ8', 'CFQ7TTC0KHS0', 'CFQ7TTC0P85B', 'CFQ7TTC0K5DJ', 'CFQ7TTC0K6L8', 'CFQ7TTC10QFD']);
 const TTL = 5 * 60_000;
+const BATCH_SIZE = 60; // catalog lookup limit
+const PAGE_SIZE = 120;
 
 export function parseEntitlements(output: string, account: string, market: string, now = Date.now()): { checkedAt: string; entries: Map<string, Entitlement>; skipped: number } {
   if (output.length > 8_000_000) throw Error('Account library response is too large.');
@@ -87,10 +89,12 @@ export class AccountLibrary {
   private cached?: { checkedAt: string; entries: Map<string, Entitlement>; skipped: number; until: number; key: string };
   private job?: Promise<void>;
   private pages = new Map<string, AccountLibraryPage>();
+  // Catalog metadata per product for the current snapshot, so every filter pages through one title-sorted list.
+  private resolved = new Map<string, CatalogProduct | undefined>();
   constructor(private catalog: Catalog, private reader: Reader = read) {}
   reset(): void {
     this.generation++; this.controller?.abort(); this.controller = undefined;
-    this.cached = undefined; this.job = undefined; this.pages.clear();
+    this.cached = undefined; this.job = undefined; this.pages.clear(); this.resolved.clear();
   }
   select(account: string | undefined, binary: string | undefined, market: string): void {
     const normalized = /^[A-Z]{2}$/.test(market.toUpperCase()) ? market.toUpperCase() : 'US';
@@ -117,7 +121,7 @@ export class AccountLibrary {
           }
           current();
           this.cached = { ...data, until: Date.parse(data.checkedAt) + TTL, key: randomUUID() };
-          this.pages.clear();
+          this.pages.clear(); this.resolved.clear();
         })().finally(() => { if (generation === this.generation) { this.controller = undefined; this.job = undefined; } });
       }
       await this.job;
@@ -160,20 +164,33 @@ export class AccountLibrary {
       const match = cursor.match(/^([a-f0-9-]{36}):(all|owned|gamepass):(\d{1,5})$/);
       if (!match || match[1] !== cached.key || match[2] !== kind) throw Error('Invalid or expired library page.');
       offset = Number(match[3]);
-      if (offset % 60 || offset > ids.length) throw Error('Invalid library page offset.');
+      if (offset % PAGE_SIZE) throw Error('Invalid library page offset.');
     }
     const key = `${kind}:${offset}`;
     const existing = this.pages.get(key);
     if (existing) return structuredClone({ ...existing, accessByProductId, products: existing.products.filter(p => accessByProductId[p.productId]) });
-    const products = await this.catalog(ids.slice(offset, offset + 60), identity.market);
+    // Titles are only known from the catalog, so resolve the whole licensed set (in parallel batches) and
+    // page through it sorted by title; paging by product id would interleave the alphabet on every page.
+    const missing = ids.filter(product => !this.resolved.has(product));
+    const batches: string[][] = [];
+    for (let i = 0; i < missing.length; i += BATCH_SIZE) batches.push(missing.slice(i, i + BATCH_SIZE));
+    let next = 0;
+    await Promise.all(Array.from({ length: Math.min(4, batches.length) }, async () => {
+      while (next < batches.length) {
+        const batch = batches[next++];
+        const found = await this.catalog(batch, identity.market);
+        for (const product of found) if (batch.includes(product.productId)) this.resolved.set(product.productId, product);
+        for (const product of batch) if (!this.resolved.has(product)) this.resolved.set(product, undefined);
+      }
+    }));
     current();
     if (this.cached !== cached) throw Error('Library results changed. Refresh this page.');
-    const allowed = new Set(ids.slice(offset, offset + 60));
+    const sorted = ids.flatMap(product => { const value = this.resolved.get(product); return value && accessByProductId[product] ? [{ ...value, access: accessByProductId[product]! }] : []; })
+      .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base', numeric: true }) || a.productId.localeCompare(b.productId));
+    if (offset > sorted.length) throw Error('Invalid library page offset.');
     const page: AccountLibraryPage = { kind, checkedAt: cached.checkedAt, accessByProductId, skippedEntitlements: cached.skipped,
-      products: products.filter(product => allowed.has(product.productId) && accessByProductId[product.productId])
-        .map(product => ({ ...product, access: accessByProductId[product.productId] }))
-        .sort((a, b) => a.title.localeCompare(b.title)),
-      cursor: offset + 60 < ids.length ? `${cached.key}:${kind}:${offset + 60}` : undefined };
+      products: sorted.slice(offset, offset + PAGE_SIZE), total: sorted.length,
+      cursor: offset + PAGE_SIZE < sorted.length ? `${cached.key}:${kind}:${offset + PAGE_SIZE}` : undefined };
     this.pages.set(key, page);
     return structuredClone(page);
   }

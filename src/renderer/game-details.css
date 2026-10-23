@@ -112,3 +112,62 @@ html[data-gamepad-navigation] .gd-back-hint { display:inline-grid; }
 .game-details-page .alert.amber { margin:16px 0 0; }
 .game-details-page .game-update-status p { padding:0; }
 @media (max-width:1000px) { .gd-play-row { flex-wrap:wrap; } .gd-last-played { padding-left:18px; } }
+
+.app-shell { isolation: isolate; }
+.gd-backdrop { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity .7s ease; }
+.gd-backdrop.shown { opacity: 1; }
+.gd-backdrop::after { content: ''; position: absolute; inset: 0; background: rgba(4, 6, 10, .86); }
+.gd-backdrop img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  filter: blur(40px) saturate(1.9) brightness(.6); transform: scale(1.15);
+}
+.app-shell.has-backdrop .sidebar { background: var(--glass-chrome); backdrop-filter: var(--glass-blur); border-right-color: rgba(255,255,255,.06); }
+.app-shell.has-backdrop .topbar { isolation: isolate; background: transparent; border-bottom: 0; }
+/* The glass sits on a pseudo-element so the search box inside the bar can blur the backdrop itself. */
+.app-shell.has-backdrop .topbar::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--glass-bar); backdrop-filter: var(--glass-blur); }
+
+.sidebar, .topbar { transition: background-color .7s ease; }
+
+/* Same translucent glass look on Downloads, Settings and the install queue popup. */
+.app-shell.has-backdrop :is(.download-item, .settings-card, .queue-preview-card) {
+  background: var(--glass-surface); backdrop-filter: var(--glass-blur); border-color: rgba(255,255,255,.06); border-radius: 12px;
+}
+.app-shell.has-backdrop .queue-preview-card { background: rgba(8, 10, 13, .75); }
+.gd-support-note { margin: 10px 0 0; padding: 0; font-size: 13px; color: #e0b46a; }
+
+/* Translucent selection in the sidebar so the artwork shows through. */
+.sidebar .nav-item:hover, .sidebar .queue-summary:hover { background: rgba(255, 255, 255, .04); }
+.sidebar .nav-item.active, .sidebar .queue-summary.active, .sidebar .recent-item.active { background: rgba(255, 255, 255, .1); backdrop-filter: var(--glass-blur) brightness(1.1); box-shadow: none; border: 0; }
+
+/* Settings and Downloads are text-heavy, so their page backdrop is dimmed further. */
+.app-shell.page-settings .gd-backdrop::after, .app-shell.page-downloads .gd-backdrop::after { background: rgba(4, 6, 10, .96); }
+
+/* Home quick-access tiles share the same glass. */
+.app-shell.has-backdrop .quick-grid > button {
+  background: var(--glass-surface); backdrop-filter: var(--glass-blur); border-color: rgba(255,255,255,.06);
+}
+.app-shell.has-backdrop .quick-grid > button:hover { background: rgba(48, 52, 58, .82); }
+
+/* Settings sections: rounded, dark translucent glass. */
+.settings-page .settings-card { border-radius: 12px; border: 1px solid rgba(255,255,255,.06); }
+.app-shell.has-backdrop .settings-page .settings-card { background: var(--glass-panel); backdrop-filter: var(--glass-blur); }
+.settings-page .settings-card.launcher-card { margin-bottom: 14px; }
+
+/* Status bubbles (Stored, Validated, Ready…) are fully rounded pills. */
+.page .status-label, .page .dependency, .page .state-pill, .state-pill {
+  border-radius: 999px; box-sizing: border-box; height: 26px; min-width: 86px; padding: 3px 9px 0; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap;
+}
+.page .dependency { height: 32px; font-size: 11px; }
+/* State pills carry an icon, so their content is already vertically centred. */
+.page .state-pill, .state-pill { padding: 0 10px 3px; }
+/* Status labels pin the dot to the left edge while the text stays centred. */
+.page .status-label { display: flex; position: relative; padding: 0 24px; min-width: 108px; }
+.page .status-label > .status-dot { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); }
+
+
+/* With artwork behind the app the top bar floats over the page, so scrolling content passes under its glass. */
+.app-shell.has-backdrop { --topbar-h: 62px; }
+.app-shell.has-backdrop .content-shell { position: relative; grid-template-rows: minmax(0, 1fr); }
+.app-shell.has-backdrop .topbar { position: absolute; inset: 0 0 auto 0; height: var(--topbar-h); z-index: 20; }
+.app-shell.has-backdrop .page-scroll { padding-top: var(--topbar-h); scroll-padding-top: var(--topbar-h); }

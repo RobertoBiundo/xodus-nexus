@@ -1,4 +1,4 @@
-export type Page = 'home' | 'store' | 'library' | 'downloads' | 'settings';
+export type Page = 'home' | 'store' | 'library' | 'installed' | 'downloads' | 'settings';
 
 export interface BackendCapabilities {
   commands: string[];
@@ -341,9 +341,13 @@ export interface AccountLibraryPage {
   products: (CatalogProduct & { access: 'owned' | 'gamepass' })[];
   accessByProductId: Record<string, 'owned' | 'gamepass'>;
   cursor?: string;
+  /** Number of products across all pages, used to reserve scroll height. */
+  total?: number;
   checkedAt: string;
   skippedEntitlements?: number;
 }
+
+export type WindowControlAction = 'minimize' | 'toggle-maximize' | 'close';
 
 export interface LauncherApi {
   getSnapshot(): Promise<AppSnapshot>;
@@ -395,6 +399,7 @@ export interface LauncherApi {
   removeGame(id: string, mode: 'library' | 'delete-files'): Promise<void>;
   getGameLaunchOptions(id: string): Promise<GameLaunchOptions>;
   getGameDetails(id: string): Promise<GameStoreDetails | undefined>;
+  getProductDetails(productId: string): Promise<GameStoreDetails | undefined>;
   getGameActivity(id: string, refresh?: boolean): Promise<GameActivity>;
   getGameAchievements(id: string, refresh?: boolean): Promise<GameAchievements>;
   launchGame(id: string): Promise<void>;
@@ -409,4 +414,6 @@ export interface LauncherApi {
   onSnapshot(callback: (snapshot: AppSnapshot) => void): () => void;
   onOperationLog(callback: (entry: { scope: string; line: string }) => void): () => void;
   isDemoTour(): boolean;
+  /** Present only when the launcher draws its own window frame. */
+  windowControls?: { minimize(): void; toggleMaximize(): void; close(): void };
 }
